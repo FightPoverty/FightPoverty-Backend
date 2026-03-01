@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
 from src.routers import auth, homeless, stores, transactions, products, allocations, config, reports, users
@@ -82,6 +83,15 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app and include routers
 app = FastAPI(title="homeless-donation-api", lifespan=lifespan)
+
+# Allow CORS so the separate frontend service on Zeabur can connect
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")], # Zeabur will set FRONTEND_URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(homeless.router, prefix="/api/homeless", tags=["homeless"])
 app.include_router(stores.router, prefix="/api/stores", tags=["stores"])
