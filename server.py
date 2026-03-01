@@ -84,10 +84,14 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app and include routers
 app = FastAPI(title="homeless-donation-api", lifespan=lifespan)
 
+# 取得允許的前端網址 (支援用逗號分隔多個網址，預設允許本地開發)
+frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:5173")
+origins = [url.strip() for url in frontend_urls.split(",")]
+
 # Allow CORS so the separate frontend service on Zeabur can connect
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")], # Zeabur will set FRONTEND_URL
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
