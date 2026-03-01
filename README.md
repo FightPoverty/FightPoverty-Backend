@@ -10,6 +10,12 @@ Before starting, copy the `.env.example` file to `.env` and fill in your own val
 cp .env.example .env
 ```
 
+If you need the frontend for development, initialize and update the git submodule:
+
+```bash
+git submodule update --init --recursive
+```
+
 - `.env` is mainly used by the backend container
 
 - In Docker Compose, Redis must use:
