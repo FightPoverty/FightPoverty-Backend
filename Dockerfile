@@ -23,9 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application's code into the container at /app
 COPY . /app/
 
-# Expose port 8000 to allow communication to the Uvicorn server
+# Expose port 3001 to allow communication to the Uvicorn server
 EXPOSE 3001
 
 # Run server.py when the container launches
-# Use --host 0.0.0.0 to make it accessible from outside the container
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "3001"]
+CMD ["python", "server.py"]
