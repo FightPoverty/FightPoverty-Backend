@@ -40,7 +40,6 @@ Then, run the script:
 
 This script will handle creating, starting, and attaching to the development containers using `docker-compose.dev.yml`.
 
-
 #### Option B: Use Docker Compose manually
 
 Start all services in detached mode:
@@ -62,11 +61,11 @@ docker exec -it fightpoverty-backend python seed_test_users.py
 
 ### Access the Services
 
-- Frontend (Vite dev server): http://localhost:5173
+- Frontend (Vite dev server): <http://localhost:5173>
 
-- Backend API (FastAPI): http://localhost:3001
+- Backend API (FastAPI): <http://localhost:3001>
 
-  - Health check: http://localhost:3001/health
+  - Health check: <http://localhost:3001/health>
 
 ### Stopping the Development Environment
 
@@ -80,7 +79,7 @@ chmod +x stop_dev_env.sh
 ./stop_dev_env.sh
 ```
 
-To stop containers and remove volumes (⚠ Redis data will be lost):
+To stop containers and remove volumes (⚠ Redis data will be cleared):
 
 ```bash
 ./stop_dev_env.sh clean
