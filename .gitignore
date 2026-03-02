@@ -40,3 +40,6 @@ coverage.xml
 *.tmp
 *.swp
 *.swo
+
+# Test configuration files
+scripts/seed_data.json

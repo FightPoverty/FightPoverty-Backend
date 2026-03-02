@@ -50,13 +50,30 @@ docker compose -f docker-compose.dev.yml up -d
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-### Initialize Redis Test Data (Seed Users)
+### Initialize and Clear Test Data (Warning: For Testing Only)
 
-Redis runs inside the Docker Compose network.
-Therefore, the seed script must be executed inside the backend container.
+Before seeding data, you must create your local config file:
 
 ```bash
-docker exec -it fightpoverty-backend python seed_test_users.py
+cp scripts/seed_data.json.example scripts/seed_data.json
+```
+
+(Feel free to modify the values in `scripts/seed_data.json` for your local testing needs)
+
+To **Seed the Database** with test users, stores, and products:
+
+```bash
+python scripts/seed_test_data.py
+# Or if running inside Docker:
+# docker exec -it fightpoverty-backend python scripts/seed_test_data.py
+```
+
+To **Clear the Database** (this will FLUSH the current Redis database):
+
+```bash
+python scripts/clear_redis.py
+# Or if running inside Docker:
+# docker exec -it fightpoverty-backend python scripts/clear_redis.py
 ```
 
 ### Access the Services

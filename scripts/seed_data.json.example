@@ -1,0 +1,44 @@
+{
+    "homeless": {
+        "name": "YOUR_TEST_HOMELESS_NAME",
+        "id_number": "YOUR_ID_NUMBER",
+        "balance": "YOUR_INITIAL_BALANCE",
+        "phone": "YOUR_PHONE_NUMBER",
+        "address": "YOUR_TEST_ADDRESS",
+        "emergency_contact": "YOUR_EMERGENCY_CONTACT",
+        "emergency_phone": "YOUR_EMERGENCY_PHONE",
+        "notes": "YOUR_NOTES"
+    },
+    "store": {
+        "name": "YOUR_TEST_STORE_NAME",
+        "category": "YOUR_STORE_CATEGORY",
+        "address": "YOUR_STORE_ADDRESS",
+        "phone": "YOUR_STORE_PHONE"
+    },
+    "association": {
+        "name": "YOUR_TEST_ASSOCIATION_NAME",
+        "description": "YOUR_ASSOCIATION_DESC"
+    },
+    "product": {
+        "name": "YOUR_TEST_PRODUCT",
+        "points": "YOUR_PRODUCT_POINTS",
+        "category": "YOUR_PRODUCT_CATEGORY",
+        "description": "YOUR_PRODUCT_DESC"
+    },
+    "users": [
+        {
+            "username": "YOUR_USERNAME_1",
+            "password": "YOUR_PASSWORD_1",
+            "name": "YOUR_DISPLAY_NAME_1",
+            "role": "YOUR_ROLE_1 (e.g., system_admin, ngo_admin)",
+            "link": "YOUR_LINKED_ENTITY_1 (optional, leave empty if admin)"
+        },
+        {
+            "username": "YOUR_USERNAME_2",
+            "password": "YOUR_PASSWORD_2",
+            "name": "YOUR_DISPLAY_NAME_2",
+            "role": "YOUR_ROLE_2 (e.g., store, homeless, association_partner)",
+            "link": "YOUR_LINKED_ENTITY_2 (optional, e.g., store, homeless, association)"
+        }
+    ]
+}
