@@ -183,8 +183,8 @@ async def refresh(request: Request) -> JSONResponse:
         value=new_access,
         httponly=True,
         max_age=jwt_manager.access_expire_minutes * 60,
-        samesite="lax",
-        secure=True,
+        samesite="none" if COOKIE_SECURE else "lax",
+        secure=COOKIE_SECURE,
         path="/",
     )
 

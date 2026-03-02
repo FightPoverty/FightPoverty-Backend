@@ -111,7 +111,7 @@ class JWTManager:
             value=access,
             httponly=True,
             max_age=self.access_expire_minutes * 60,
-            samesite="lax",
+            samesite="none" if self.cookie_secure else "lax",
             secure=self.cookie_secure,
             path="/",
         )
@@ -122,7 +122,7 @@ class JWTManager:
             value=refresh,
             httponly=True,
             max_age=self.refresh_expire_days * 24 * 60 * 60,
-            samesite="lax",
+            samesite="none" if self.cookie_secure else "lax",
             secure=self.cookie_secure,
             path="/",
         )
