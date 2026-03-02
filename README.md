@@ -22,6 +22,9 @@ git submodule update --init --recursive
 
     > REDIS_HOST=redis
 
+**⚠️ 跨網域部署注意 (Zeabur / 雲端環境)：**
+> 如果前端與後端部署在不同的子網域（例如 `frontend.app` 與 `backend.app`），請務必在後端的環境變數設定 `COOKIE_SECURE=true`，否則瀏覽器的 SameSite 安全機制會阻擋登入狀態 (JWT Cookies) 的傳遞造成 401 錯誤。
+
 ### Starting the Development Environment
 
 #### Option A: Use the helper script (recommended)
