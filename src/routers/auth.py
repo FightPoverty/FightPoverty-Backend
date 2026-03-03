@@ -45,10 +45,8 @@ jwt_manager = JWTManager(
 # Middlewares / Helpers
 # ------------------------------
 def authenticate_token(request: Request) -> Dict[str, Any]:
-    """
-    取 Access Token，失敗 → 401
-    """
-    return jwt_manager.get_user_from_cookie(request)
+    """取 Access Token（優先 header，降級 cookie），失敗 → 401。"""
+    return jwt_manager.get_user_from_request(request)
 
 
 # ----------------------------------------------------------------------
@@ -100,12 +98,15 @@ async def login(request: LoginRequest):
     access_token = jwt_manager.create_access_token(user_info_for_token)
     refresh_token = jwt_manager.create_refresh_token(user_info_for_token)
 
-    # 設定 cookies
+    # 回傳 tokens 至 JSON body（供前端 Bearer Token 使用）
+    # 同時設定 cookies（向後相容）
     response = JSONResponse(
         content={
             "success": True,
             "message": "登入成功",
             "user": await get_user_info(user),
+            "accessToken": access_token,
+            "refreshToken": refresh_token,
         }
     )
     jwt_manager.set_auth_cookies(response, access_token, refresh_token)
@@ -130,7 +131,7 @@ async def logout() -> JSONResponse:
 @router.post("/refresh")
 async def refresh(request: Request) -> JSONResponse:
     try:
-        refresh_payload = jwt_manager.get_refresh_payload_from_cookie(request)
+        refresh_payload = jwt_manager.get_refresh_payload(request)
     except HTTPException:
         # refresh token 不存在 / 過期 / 無效
         response = JSONResponse(
@@ -174,9 +175,13 @@ async def refresh(request: Request) -> JSONResponse:
 
     new_access = jwt_manager.create_access_token(user_info_for_token)
 
-    # 設 cookie
+    # 回傳新 token 至 JSON body + 設 cookie（向後相容）
     response = JSONResponse(
-        content={"success": True, "message": "Token 已刷新"}
+        content={
+            "success": True,
+            "message": "Token 已刷新",
+            "accessToken": new_access,
+        }
     )
     response.set_cookie(
         key=jwt_manager.access_cookie_name,

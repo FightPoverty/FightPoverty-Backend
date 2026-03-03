@@ -132,10 +132,28 @@ class JWTManager:
         response.delete_cookie(self.refresh_cookie_name, path="/")
 
     # ------------------------------------------------------------------
-    # 取出目前使用者（從 Access Token cookie）
+    # 從請求中提取 token（優先 Authorization header，降級 cookie）
     # ------------------------------------------------------------------
-    def get_user_from_cookie(self, request: Request) -> Dict[str, Any]:
-        token = request.cookies.get(self.access_cookie_name)
+    def _extract_token(self, request: Request, cookie_name: str) -> str | None:
+        """從請求中提取 JWT token。
+
+        優先從 Authorization: Bearer <token> header 取得，
+        若不存在則降級從 cookie 取得（向後相容）。
+        """
+        # 優先：Authorization header
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            return auth_header[7:]  # 去除 "Bearer " 前綴
+
+        # 降級：cookie
+        return request.cookies.get(cookie_name)
+
+    # ------------------------------------------------------------------
+    # 取出目前使用者（優先 header，降級 cookie）
+    # ------------------------------------------------------------------
+    def get_user_from_request(self, request: Request) -> Dict[str, Any]:
+        """從 Access Token 取出使用者資訊。"""
+        token = self._extract_token(request, self.access_cookie_name)
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -149,14 +167,15 @@ class JWTManager:
                 detail="Token 類型錯誤（需要 access）",
             )
 
-        # payload 內會有：sub, type, username(若有), role(若有), exp...
         return payload
 
+
     # ------------------------------------------------------------------
-    # 取出 Refresh Token payload（給 refresh API 用）
+    # 取出 Refresh Token payload（優先 header，降級 cookie）
     # ------------------------------------------------------------------
-    def get_refresh_payload_from_cookie(self, request: Request) -> Dict[str, Any]:
-        token = request.cookies.get(self.refresh_cookie_name)
+    def get_refresh_payload(self, request: Request) -> Dict[str, Any]:
+        """從 Refresh Token 取出 payload。"""
+        token = self._extract_token(request, self.refresh_cookie_name)
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
