@@ -1,29 +1,27 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import jwt
-from fastapi import Request, HTTPException, status
-from fastapi.responses import Response
+from fastapi import HTTPException, Request, status
 
 
 class JWTManager:
+    """管理 JWT Token 的建立、解碼與提取。
+
+    使用 Bearer Token（Authorization header）進行認證。
+    """
+
     def __init__(
         self,
         secret_key: str,
         algorithm: str = "HS256",
         access_expire_minutes: int = 15,
         refresh_expire_days: int = 7,
-        access_cookie_name: str = "access_token",
-        refresh_cookie_name: str = "refresh_token",
-        cookie_secure: bool = True,
     ):
         self.secret_key = secret_key
         self.algorithm = algorithm
         self.access_expire_minutes = access_expire_minutes
         self.refresh_expire_days = refresh_expire_days
-        self.access_cookie_name = access_cookie_name
-        self.refresh_cookie_name = refresh_cookie_name
-        self.cookie_secure = cookie_secure
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -34,7 +32,8 @@ class JWTManager:
         token_type: str,
         expires_delta: timedelta,
     ) -> Dict[str, Any]:
-        """
+        """建立 JWT payload。
+
         預期 user_info 至少包含:
           - 'id'   : 使用者 ID
           - 'role' : 使用者角色 (可選)
@@ -46,7 +45,7 @@ class JWTManager:
         if not user_id:
             raise ValueError("user_info 必須包含 'id' 或 'userId' 欄位")
 
-        # 🔴 關鍵：不論是 UUID 或其他型別，統一轉成字串
+        # 不論是 UUID 或其他型別，統一轉成字串
         user_id_str = str(user_id)
         payload: Dict[str, Any] = {
             "userId": user_id_str,
@@ -69,6 +68,7 @@ class JWTManager:
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
     def decode(self, token: str) -> Dict[str, Any]:
+        """解碼並驗證 JWT token。"""
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
@@ -86,6 +86,7 @@ class JWTManager:
             )
 
     def create_access_token(self, user_info: Dict[str, Any]) -> str:
+        """建立 Access Token。"""
         payload = self._build_payload(
             user_info=user_info,
             token_type="access",
@@ -94,6 +95,7 @@ class JWTManager:
         return self._create_token(payload)
 
     def create_refresh_token(self, user_info: Dict[str, Any]) -> str:
+        """建立 Refresh Token。"""
         payload = self._build_payload(
             user_info=user_info,
             token_type="refresh",
@@ -102,62 +104,27 @@ class JWTManager:
         return self._create_token(payload)
 
     # ------------------------------------------------------------------
-    # Cookie helpers（JSONResponse / Response 皆可）
+    # 從 Authorization header 提取 Bearer Token
     # ------------------------------------------------------------------
-    def set_auth_cookies(self, response: Response, access: str, refresh: str) -> None:
-        # Access Token cookie（secure=False 時可在 HTTP 本地開發使用）
-        response.set_cookie(
-            key=self.access_cookie_name,
-            value=access,
-            httponly=True,
-            max_age=self.access_expire_minutes * 60,
-            samesite="none" if self.cookie_secure else "lax",
-            secure=self.cookie_secure,
-            path="/",
-        )
-
-        # Refresh Token cookie
-        response.set_cookie(
-            key=self.refresh_cookie_name,
-            value=refresh,
-            httponly=True,
-            max_age=self.refresh_expire_days * 24 * 60 * 60,
-            samesite="none" if self.cookie_secure else "lax",
-            secure=self.cookie_secure,
-            path="/",
-        )
-
-    def clear_auth_cookies(self, response: Response) -> None:
-        response.delete_cookie(self.access_cookie_name, path="/")
-        response.delete_cookie(self.refresh_cookie_name, path="/")
-
-    # ------------------------------------------------------------------
-    # 從請求中提取 token（優先 Authorization header，降級 cookie）
-    # ------------------------------------------------------------------
-    def _extract_token(self, request: Request, cookie_name: str) -> str | None:
-        """從請求中提取 JWT token。
-
-        優先從 Authorization: Bearer <token> header 取得，
-        若不存在則降級從 cookie 取得（向後相容）。
-        """
-        # 優先：Authorization header
+    @staticmethod
+    def _extract_bearer_token(request: Request) -> str | None:
+        """從 Authorization: Bearer <token> header 提取 token。"""
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             return auth_header[7:]  # 去除 "Bearer " 前綴
-
-        # 降級：cookie
-        return request.cookies.get(cookie_name)
+        return None
 
     # ------------------------------------------------------------------
-    # 取出目前使用者（優先 header，降級 cookie）
+    # 取出目前使用者（從 Access Token）
     # ------------------------------------------------------------------
     def get_user_from_request(self, request: Request) -> Dict[str, Any]:
-        """從 Access Token 取出使用者資訊。"""
-        token = self._extract_token(request, self.access_cookie_name)
+        """從 Authorization header 的 Access Token 取出使用者資訊。"""
+        token = self._extract_bearer_token(request)
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="缺少 Access Token",
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
         payload = self.decode(token)
@@ -169,17 +136,17 @@ class JWTManager:
 
         return payload
 
-
     # ------------------------------------------------------------------
-    # 取出 Refresh Token payload（優先 header，降級 cookie）
+    # 取出 Refresh Token payload
     # ------------------------------------------------------------------
     def get_refresh_payload(self, request: Request) -> Dict[str, Any]:
-        """從 Refresh Token 取出 payload。"""
-        token = self._extract_token(request, self.refresh_cookie_name)
+        """從 Authorization header 的 Refresh Token 取出 payload。"""
+        token = self._extract_bearer_token(request)
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="缺少 Refresh Token",
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
         payload = self.decode(token)

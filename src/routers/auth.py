@@ -27,25 +27,20 @@ load_dotenv()
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "DEFAULT_SECRET_KEY")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_ACCESS_EXPIRY_MINUTES = int(os.getenv("JWT_ACCESS_EXPIRY_MINUTES", 60))  # 1 小時
-JWT_REFRESH_EXPIRY_DAYS = int(os.getenv("JWT_REFRESH_EXPIRY_DAYS", 60))  # 60 天（2 個月）
-# 本地 HTTP 開發時設為 false，否則 cookie 不會被瀏覽器傳送，導致 401
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+JWT_REFRESH_EXPIRY_DAYS = int(os.getenv("JWT_REFRESH_EXPIRY_DAYS", 60))  # 60 天
 
 jwt_manager = JWTManager(
     secret_key=JWT_SECRET_KEY,
     algorithm=JWT_ALGORITHM,
     access_expire_minutes=JWT_ACCESS_EXPIRY_MINUTES,
     refresh_expire_days=JWT_REFRESH_EXPIRY_DAYS,
-    access_cookie_name="accessToken",   # 跟 Express 版一致
-    refresh_cookie_name="refreshToken", # 跟 Express 版一致
-    cookie_secure=COOKIE_SECURE,
 )
 
 
 # Middlewares / Helpers
 # ------------------------------
 def authenticate_token(request: Request) -> Dict[str, Any]:
-    """取 Access Token（優先 header，降級 cookie），失敗 → 401。"""
+    """從 Authorization header 取 Access Token，失敗 → 401。"""
     return jwt_manager.get_user_from_request(request)
 
 
@@ -98,9 +93,8 @@ async def login(request: LoginRequest):
     access_token = jwt_manager.create_access_token(user_info_for_token)
     refresh_token = jwt_manager.create_refresh_token(user_info_for_token)
 
-    # 回傳 tokens 至 JSON body（供前端 Bearer Token 使用）
-    # 同時設定 cookies（向後相容）
-    response = JSONResponse(
+    # 回傳 tokens（前端存入 localStorage，後續用 Bearer Token 發送）
+    return JSONResponse(
         content={
             "success": True,
             "message": "登入成功",
@@ -109,8 +103,6 @@ async def login(request: LoginRequest):
             "refreshToken": refresh_token,
         }
     )
-    jwt_manager.set_auth_cookies(response, access_token, refresh_token)
-    return response
 
 
 # =========================================================
@@ -118,11 +110,10 @@ async def login(request: LoginRequest):
 # =========================================================
 @router.post("/logout")
 async def logout() -> JSONResponse:
-    response = JSONResponse(
+    # 前端負責清除 localStorage 中的 token
+    return JSONResponse(
         content={"success": True, "message": "登出成功"}
     )
-    jwt_manager.clear_auth_cookies(response)
-    return response
 
 
 # =========================================================
@@ -134,31 +125,25 @@ async def refresh(request: Request) -> JSONResponse:
         refresh_payload = jwt_manager.get_refresh_payload(request)
     except HTTPException:
         # refresh token 不存在 / 過期 / 無效
-        response = JSONResponse(
+        return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "message": "未提供或無效的 refresh token"},
         )
-        jwt_manager.clear_auth_cookies(response)
-        return response
 
     user_id = refresh_payload.get("userId")
     if not user_id:
-        response = JSONResponse(
+        return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "message": "無效 refresh token（缺少 userId）"},
         )
-        jwt_manager.clear_auth_cookies(response)
-        return response
 
     # 查找用戶
     user = await get_user_by_id(user_id)
     if not user:
-        response = JSONResponse(
+        return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "message": "用戶不存在"},
         )
-        jwt_manager.clear_auth_cookies(response)
-        return response
 
     # 生成新 access token（包含關聯 ID 以便權限檢查）
     user_info_for_token = {
@@ -175,25 +160,13 @@ async def refresh(request: Request) -> JSONResponse:
 
     new_access = jwt_manager.create_access_token(user_info_for_token)
 
-    # 回傳新 token 至 JSON body + 設 cookie（向後相容）
-    response = JSONResponse(
+    return JSONResponse(
         content={
             "success": True,
             "message": "Token 已刷新",
             "accessToken": new_access,
         }
     )
-    response.set_cookie(
-        key=jwt_manager.access_cookie_name,
-        value=new_access,
-        httponly=True,
-        max_age=jwt_manager.access_expire_minutes * 60,
-        samesite="none" if COOKIE_SECURE else "lax",
-        secure=COOKIE_SECURE,
-        path="/",
-    )
-
-    return response
 
 
 # =========================================================
