@@ -1,113 +1,91 @@
 # FightPoverty-Backend
 
+Backend service for the FightPoverty donation management platform, built with FastAPI + Redis.
+
 ## Development
 
-### Environment Setup
+### 1. Environment Setup
 
-Before starting, copy the `.env.example` file to `.env` and fill in your own values.
+Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
 cp .env.example .env
 ```
 
-If you need the frontend for development, initialize and update the git submodule:
+To include the frontend for development, initialize the git submodule:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-- `.env` is mainly used by the backend container
+> [!NOTE]
+> - `.env` is primarily used by the backend container.
+> - In Docker Compose, Redis must be configured with `REDIS_HOST=redis`.
 
-- In Docker Compose, Redis must use:
+> [!WARNING]
+> **Cross-domain deployment (Zeabur / Cloud):** Make sure the backend's `FRONTEND_URL` is set to the frontend's production URL (e.g. `https://fightpoverty.zeabur.app`) to allow CORS requests.
 
-    > REDIS_HOST=redis
+### 2. Starting the Development Environment
 
-**⚠️ 跨網域部署注意 (Zeabur / 雲端環境)：**
-> 如果前端與後端部署在不同的子網域（例如 `frontend.app` 與 `backend.app`），請務必在後端的環境變數設定 `COOKIE_SECURE=true`，否則瀏覽器的 SameSite 安全機制會阻擋登入狀態 (JWT Cookies) 的傳遞造成 401 錯誤。
-
-### Starting the Development Environment
-
-#### Option A: Use the helper script (recommended)
-
-To start the development environment, make the script executable first:
+**Option A: Helper script (recommended)**
 
 ```bash
 chmod +x enter_dev_env.sh
-```
-
-Then, run the script:
-
-```bash
 ./enter_dev_env.sh
 ```
 
-This script will handle creating, starting, and attaching to the development containers using `docker-compose.dev.yml`.
+The script handles creating, starting, and attaching to the containers defined in `docker-compose.dev.yml`.
 
-#### Option B: Use Docker Compose manually
-
-Start all services in detached mode:
+**Option B: Docker Compose manually**
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d
-
-docker compose -f docker-compose.dev.yml up -d --build
+docker compose -f docker-compose.dev.yml up -d          # Start
+docker compose -f docker-compose.dev.yml up -d --build   # Rebuild and start
 ```
 
-### Initialize and Clear Test Data (Warning: For Testing Only)
+### 3. Test Data
 
-Before seeding data, you must create your local config file:
+Create your local seed config (feel free to modify the values):
 
 ```bash
 cp scripts/seed_data.json.example scripts/seed_data.json
 ```
 
-(Feel free to modify the values in `scripts/seed_data.json` for your local testing needs)
-
-To **Seed the Database** with test users, stores, and products:
+Seed the database with test users, stores, and products:
 
 ```bash
 python scripts/seed_test_data.py
-# Or if running inside Docker:
-# docker exec -it fightpoverty-backend python scripts/seed_test_data.py
+# Docker: docker exec -it fightpoverty-backend python scripts/seed_test_data.py
 ```
 
-To **Clear the Database** (this will FLUSH the current Redis database):
+Clear the database (⚠️ flushes the entire Redis DB):
 
 ```bash
 python scripts/clear_redis.py
-# Or if running inside Docker:
-# docker exec -it fightpoverty-backend python scripts/clear_redis.py
+# Docker: docker exec -it fightpoverty-backend python scripts/clear_redis.py
 ```
 
-### Access the Services
+### 4. Access Services
 
-- Frontend (Vite dev server): <http://localhost:5173>
+| Service | URL |
+|---------|-----|
+| Frontend (Vite) | <http://localhost:5173> |
+| Backend API (FastAPI) | <http://localhost:3001> |
+| Health Check | <http://localhost:3001/health> |
+| API Docs (Swagger UI) | <http://localhost:3001/docs> |
+| API Docs (ReDoc) | <http://localhost:3001/redoc> |
 
-- Backend API (FastAPI): <http://localhost:3001>
-
-  - Health check: <http://localhost:3001/health>
-
-### Stopping the Development Environment
-
-To stop all development containers (keep Redis data):
+### 5. Stopping the Development Environment
 
 ```bash
 chmod +x stop_dev_env.sh
-```
-
-```bash
-./stop_dev_env.sh
-```
-
-To stop containers and remove volumes (⚠ Redis data will be cleared):
-
-```bash
-./stop_dev_env.sh clean
+./stop_dev_env.sh          # Stop containers (keep Redis data)
+./stop_dev_env.sh clean    # Stop containers and remove volumes (⚠️ Redis data will be cleared)
 ```
 
 ## Production
 
-To start the production environment (backend only):
+Start the production environment (backend only):
 
 ```bash
 docker compose up -d --build
